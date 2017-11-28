@@ -14,24 +14,44 @@
 		li $a1, 1001							# 	Maximum length for the string to be read from input
 		move $t0, $a0						# 	Save the string to t0 register
 
+		
+
 		syscall 							#Making the read syscall
+
+		lb $a0, 0								#Initializing the starting index for the character of the substring
+		
+		lb $a1, 0								#Initializing the ending index for the character of the substring.
 
 
 		j main_program:
 
-		jal subprogram_2:						# Passing $a0 as argument to the function.
-
-		jal subprogram_3:
+		
 
 	main_program
-		lb $a0, ($t0)								#Initializing the starting address for the character of the string
 		
-		lb $a1, ($t0)								#Initializing the ending address for the character of the string.
+		lb $s0, ($t0)								
+		
+		addu 	$a1, $a1, 	1							#Incrementing the end index until ',' is found
+		add 	$t0, $t0, 	1							#Incrementing the address
+
+		beqz 	$s0, 			end_of_loop			#If "\0" found, end of loop
+
+		beq  	$s0, 	10, 	end_of_loop			#For string less than 9, the last characters
+																			# is "\n", so checking for that
+
+		bneq 	$s0, 44,		main_program		# If the char is not ',' go back and look at the next character
 
 
-		add $t1, $t1, 1								#Incrementing the address
+		# When a ',' is found, call subprogram_2 to find the decimal value of the string, pass the start and end index of the string
 
-		beq $a0, 44,   
+		jal subprogram_2:						# Passing $a0 and $a1 as argument to the function.
+
+		jal subprogram_3:   					# Use the output from subprogram_2 to print the decimal value of the hex string
+
+		move $a0, $a1							# Set the new starting index to the end of the old starting index
+		
+		addu $a0, 2								# Ignoring the ',' for both of the indices
+		addu $a1, 2
 
 	subprogram_2:
 
