@@ -1,5 +1,5 @@
 .data
-	too_large:	.asciiz	"too large" #Only using for debugging
+	too_large:	.asciiz	"Too large"
 	end_msg:    		.asciiz "All Characters printed"
 	newline: 			.asciiz "\n"
 	input: .space  1001
@@ -50,7 +50,6 @@
 		la $s3, 0					# Boolean for checking if a space is found after a valid character
 		la $s4, 0					# Boolean for valid character found
 
-
 		jal subprogram_1:						# Passing $a0 and $a1 as argument to the function.
 
 		jal subprogram_2:   					# Use the output from subprogram_2 to print the decimal value of the hex string
@@ -63,7 +62,7 @@
 	subprogram_1:
 
 		beqz $a0, $a1  subprogram_3			# If the starting and ending index match, we have reached the end of the string. so
-											# the result of the string.
+											# the result of the string. The variables are passed to the subprogram using stack
 		
 		lb  $s5, $a0($t0)					# Starting with the first index of the substring
 		
@@ -71,13 +70,12 @@
 
 		beq 	$a0, 	32, 	space				# Case for when a space character is found
 		
-		j subprogram_3		
+		jal subprogram_2		
+
+		j 	subprogram_1
 
 
 	subprogram_2:
-
-
-
 		blt $s5, 48, invalid 		# checks if the number is less than 48. Goes to invalid if true
 
 		ble $s5, 57, valid_num		# Checks if the ASCII of character is less than 58. At this point,
@@ -99,7 +97,35 @@
 
 
 	subprogram_3:
+
+	invalid:
+		la $t0, err_msg
+		addi $sp, $sp, -4  # For three characters
+		sw $t0, 0($sp)
+
+		jre $rs
+
+	valid_num:
+
+		sll 	$s2,	$s2, 	4 				# Multiplying the result by 16 using bit-shift	
+		subu 	$v0, 	$a0, 	48				# Finding the real value of the character by subtracting
 		
+		j loop_through
+
+	valid_capital:
+
+
+		sll 	$s1,	$s1, 	4				# Multiplying the result by 16 using bit-shift
+		subu 	$v0, 	$a0, 	55				# Finding the real value of the character by subtracting
+		
+		j loop_through
+
+
+	valid_small:
+		subu 	$v0, 	$a0, 	87				# Finding the real value of the character by subtracting
+
+		j loop_through
+
 
 	space:
 		beqz	$s4, subprogram_2			# Checks if a character has already been found
