@@ -4,67 +4,84 @@
 	newline: 			.asciiz "\n"
 	input: .space  1001
 	err_msg:			.asciiz "NaN"
-.text
+text
 	main:
-		# Code to read input
-
-		# Code to read user input
+		
 		li $v0, 8							#	Syscall code for user input
 		la $a0, input 						#	Reading from the output
-		li $a1, 1001							# 	Maximum length for the string to be read from input
-		move $t0, $a0						# 	Save the string to t0 register
-
-		
+		li $a1, 1001
+									# 	Maximum length for the string to be read from input
+									
+		move $s0, $a0						# 	Save the string to t0 register
 
 		syscall 							#Making the read syscall
 
-		lb $a0, 0								#Initializing the starting index for the character of the substring
-		
-		lb $a1, 0								#Initializing the ending index for the character of the substring.
+		la $a1, 0								#Initializing the starting index for the character of the substring
 
-
-		j main_program:
+		j main_program
 
 		
 
-	main_program
+	main_program:
 		
-		lb $s0, ($t0)								
+		move $t0, $a0						# 	Save the string to t0 register
 		
-		addu 	$a1, $a1, 	1							#Incrementing the end index until ',' is found
-		add 	$t0, $t0, 	1							#Incrementing the address
-
-
-		beqz 	$s0, 			end_of_loop			#If "\0" found, end of loop
-
-		beq  	$s0, 	10, 	end_of_loop			#For string less than 9, the last characters
-																			# is "\n", so checking for that
-
-		bneq 	$s0, 44,		main_program		# If the char is not ',' go back and look at the next character
-
-
-		# When a ',' is found, call subprogram_2 to find the decimal value of the string, pass the start and end index of the string
-
-		la $s1, 0 					# Keeing track of the length of the string being considered
-		la $s2, 0					# Result
-		la $s3, 0					# Boolean for checking if a space is found after a valid character
-		la $s4, 0					# Boolean for valid character found
-
-		jal subprogram_2:						# Passing $a0 and $a1 as argument to the function.
-
-		jal subprogram_3:   					# Use the output from subprogram_2 to print the decimal value of the hex string
-
-		move $a0, $a1							# Set the new starting index to the end of the old starting index
 		
-		addu $a0, 2								# Ignoring the ',' for both of the indices
-		addu $a1, 2
+		move $t1, $a1
+		move $t2, $a1				
+		
+		lb $s1, ($s0)					
+
+		li $v0, 1    # print_int
+		move $a0, $t1
+		syscall
+		
+		li $v0, 1    # print_int         
+		move $a0, $t2
+		syscall	
+		
+		li $v0, 4       # you can call it your way as well with addi 
+		la $a0, newline       # load address of the string
+		syscall
+		
+		
+		beqz 	$s1, 		end_of_loop			#If "\0" found, end of loop
+
+		beq  	$s1, 	10, 	end_of_loop			#For string less than 9, the last characters is "\n", so checking for that
+		
+		add 	$t0, $t0, 1						#Looking at the next character in the string
+		addu 	$t2, $t2, 	1				#Incrementing the address
+		
+		bne 	$s1, 44,		main_program		# If the char is not ',' go back and look at the next character
+
+		subu $t2, $t2, 1			#Since $t2 points to the comma, subtracting 1 from it gives the last index to the substring
+		
+		
+		move $a0, $t2
+		move $a1, $t1
+		
+		
+		la $s2, 0 					# Keeing track of the length of the string being considered
+		la $s3, 0					# Result
+		la $s4, 0					# Boolean for checking if a space is found after a valid character
+		la $s5, 0					# Boolean for valid character found
+
+		jal subprogram_2						# Passing $a0 and $a1 as argument to the function.
+
+		jal subprogram_3   					# Use the output from subprogram_2 to print the decimal value of the hex string
+		
+		
+		addu $a0, $t1, 2								# Ignoring the ',' for both of the indices
+		
+		j main_program
 
 	subprogram_2:
-
 		beqz $a0, $a1  subprogram_3			# If the starting and ending index match, we have reached the end of the string. so
 											# the result of the string. The variables are passed to the subprogram using stack
 		
-		lb  $s5, $a0($t0)					# Starting with the first index of the substring
+		move $t3, $a0
+		addu $t0, $t0, $t3
+		lb  $s5, ($t0)					# Starting with the first index of the substring
 		
 
 		beq 	$s5, 	32, 	space		# Case for when a space character is found
@@ -76,6 +93,9 @@
 
 		sll 	$s2,	$s2, 	4 			# Multiplying the result by 16 using bit-shift	
 		addu 	$s2,	$s2, 	$v0 		# Adding the value of the character to the result
+
+		addi $sp, $sp, -4  # Decrement stack pointer by 
+		sw   $s2, 0($sp)   # Save $r3 to stack
 
 		add 	$a0, $a0, 	1
 
@@ -104,6 +124,18 @@
 
 
 	subprogram_3:
+		pop:  lw   $t0, 0($sp)   # Copy from stack to $r3
+      	addi $sp, $sp, 4   # Increment stack pointer by 4
+
+      	li $v0, 1					# Syscall code for printing out an integer
+		move $a0, $t0				# Transfer $s2 to $a0 for printing
+		syscall 					
+
+		j main_program
+
+	end_of_loop:
+		li	$v0, 10					# system call code for exit = 10
+		syscall
 
 	invalid:
 		la $t0, err_msg
