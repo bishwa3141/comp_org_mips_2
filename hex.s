@@ -1,108 +1,113 @@
 .data
-	too_large:	.asciiz	"Too large"
+	too_large:	.asciiz	"too large"
 	end_msg:    		.asciiz "All Characters printed"
 	newline: 			.asciiz "\n"
 	input: .space  1001
 	err_msg:			.asciiz "NaN"
-text
+.text
 	main:
 		
-		li $v0, 8							#	Syscall code for user input
+		li $v0, 8						#	Syscall code for user input
 		la $a0, input 						#	Reading from the output
 		li $a1, 1001
-									# 	Maximum length for the string to be read from input
-									
+		syscall 						# 	Maximum length for the string to be read from input
+		
 		move $s0, $a0						# 	Save the string to t0 register
+		move $t4, $s0
+									#Making the read syscall
 
-		syscall 							#Making the read syscall
-
-		la $a1, 0								#Initializing the starting index for the character of the substring
-
+		la $s1, 0								#Initializing the starting index for the character of the substring
+		la $s2, 0								#Initializing the starting index for the character of the substring
 		j main_program
 
 		
 
 	main_program:
 		
-		move $t0, $a0						# 	Save the string to t0 register
+		li $s7, 0		#Variable to see if comma seen
+		lb $t3, ($t4)					
 		
 		
-		move $t1, $a1
-		move $t2, $a1				
-		
-		lb $s1, ($s0)					
+		beqz 	$t3, 		end_of_loop			#If "\0" found, end of loop
 
-		li $v0, 1    # print_int
-		move $a0, $t1
-		syscall
-		
-		li $v0, 1    # print_int         
-		move $a0, $t2
-		syscall	
-		
-		li $v0, 4       # you can call it your way as well with addi 
-		la $a0, newline       # load address of the string
-		syscall
+		beq  	$t3, 	10, 	end_of_loop			#For string less than 9, the last characters is "\n", so checking for that
 		
 		
-		beqz 	$s1, 		end_of_loop			#If "\0" found, end of loop
+		
+		addu 	$s2, 	$s2, 	1				#Incrementing the address
+		addu	$t4, 	$t4,	1
+		
+		
+		bne 	$t3, 44,		main_program		# If the char is not ',' go back and look at the next character
 
-		beq  	$s1, 	10, 	end_of_loop			#For string less than 9, the last characters is "\n", so checking for that
+		subu 	$s2, $s2, 1			#Since $t2 points to the comma, subtracting 1 from it gives the last index to the substring
 		
-		add 	$t0, $t0, 1						#Looking at the next character in the string
-		addu 	$t2, $t2, 	1				#Incrementing the address
-		
-		bne 	$s1, 44,		main_program		# If the char is not ',' go back and look at the next character
-
-		subu $t2, $t2, 1			#Since $t2 points to the comma, subtracting 1 from it gives the last index to the substring
+		move	$a0, $s0
+		move 	$a1, $s1
+		move 	$a2, $s2
 		
 		
-		move $a0, $t2
-		move $a1, $t1
+		la $s3, 0 					# Keeing track of the length of the string being considered
+		la $s4, 0					# Result
+		la $s5, 0					# Boolean for checking if a space is found after a valid character
+		la $s6, 0					# Boolean for valid character found
 		
 		
-		la $s2, 0 					# Keeing track of the length of the string being considered
-		la $s3, 0					# Result
-		la $s4, 0					# Boolean for checking if a space is found after a valid character
-		la $s5, 0					# Boolean for valid character found
 
 		jal subprogram_2						# Passing $a0 and $a1 as argument to the function.
 
 		jal subprogram_3   					# Use the output from subprogram_2 to print the decimal value of the hex string
 		
+		addu $s2, $s2, 1								# Ignoring the ',' for both of the indices
+		move $s1, $s2
 		
-		addu $a0, $t1, 2								# Ignoring the ',' for both of the indices
 		
 		j main_program
 
 	subprogram_2:
-		beqz $a0, $a1  subprogram_3			# If the starting and ending index match, we have reached the end of the string. so
-											# the result of the string. The variables are passed to the subprogram using stack
 		
-		move $t3, $a0
-		addu $t0, $t0, $t3
-		lb  $s5, ($t0)					# Starting with the first index of the substring
+		addu	$s3, $s3,  	1			#Incrementing the length of the hex number
 		
-
-		beq 	$s5, 	32, 	space		# Case for when a space character is found
+		move $s7, $ra				#Saving the previous register
+		move $s0, $a0
 		
-		move $a0, $s5
+		move 	$t0, $a0
+		move 	$t1, $a1  
+		move 	$t2, $a2
+		
+		
+		add $t0, $t0, $t1
+		
+		lb  $t3, ($t0)				# Starting with the first index of the substring
+		
+		
+		move $a0, $t3
+		
+		jal 	subprogram_1
+		
+	
+	
+		
+		sll 	$s4,	$s4, 	4 			# Multiplying the result by 16 using bit-shift	
+		addu 	$s4,	$s4, 	$v0 		# Adding the value of the character to the result
 
-		jal subprogram_1		
 
+		
+		add 	$t1, $t1, 	1
+		
+		
+		move 	$a1, $t1
+		move 	$a2, $t2
 
-		sll 	$s2,	$s2, 	4 			# Multiplying the result by 16 using bit-shift	
-		addu 	$s2,	$s2, 	$v0 		# Adding the value of the character to the result
-
-		addi $sp, $sp, -4  # Decrement stack pointer by 
-		sw   $s2, 0($sp)   # Save $r3 to stack
-
-		add 	$a0, $a0, 	1
-
-		j 	subprogram_2
-
-
+		move $ra, $s7
+		move $a0, $s0
+		
+		beq $t1, $t2, go_back  			# If the starting and ending index match, we have reached the end of the string. so
+								# move towards printing					
+		j subprogram_2
+		
 	subprogram_1:
+	
 		blt $a0, 48, invalid 		# checks if the number is less than 48. Goes to invalid if true
 
 		ble $a0, 57, valid_num		# Checks if the ASCII of character is less than 58. At this point,
@@ -121,48 +126,54 @@ text
 									# already greater than 96, so if true, it is a valid num in the range a-f
 
 		j invalid 					#At this point, already greater than 103, so it is invalid
-
-
-	subprogram_3:
-		pop:  lw   $t0, 0($sp)   # Copy from stack to $r3
-      	addi $sp, $sp, 4   # Increment stack pointer by 4
-
-      	li $v0, 1					# Syscall code for printing out an integer
-		move $a0, $t0				# Transfer $s2 to $a0 for printing
-		syscall 					
-
-		j main_program
-
-	end_of_loop:
-		li	$v0, 10					# system call code for exit = 10
-		syscall
-
-	invalid:
-		la $t0, err_msg
-		addi $sp, $sp, -4  # For three characters
+		
+	too_big:
+		la $t0, too_large
+		addi $sp, $sp, -4  		#For the error message
 		sw $t0, 0($sp)
 
-		jre $rs
+		jr $s7
+		
+	invalid:
+		la $t0, err_msg
+		addi $sp, $sp, -4  		#For the error message
+		sw $t0, 0($sp)
+
+		jr $s7
 
 	valid_num:
 
 		subu 	$v0, 	$a0, 	48				# Finding the real value of the character by subtracting
-		jr $rs									#  Takes you back to the end of the instruction 'jal subprogram_2'
+		jr $ra									#  Takes you back to the end of the instruction 'jal subprogram_2'
 
 	valid_capital:
 
 		subu 	$v0, 	$a0, 	55				# Finding the real value of the character by subtracting
-		jr $rs 									#  Takes you back to the end of the instruction 'jal subprogram_2'
+		jr $ra 									#  Takes you back to the end of the instruction 'jal subprogram_2'
 
 
 	valid_small:
 		subu 	$v0, 	$a0, 	87				# Finding the real value of the character by subtracting
-		jr $rs 									#  Takes you back to the end of the instruction 'jal subprogram_2'
+		jr $ra
+		
+		
+	subprogram_3:
+		lw   $a0, 0($sp)   # Copy from stack to $r3
+	      	addi $sp, $sp, 4   # Increment stack pointer by 4
+					
+		li $v0, 11    # print_int
+		syscall
+		
+		jr $ra
 
+	
+	go_back:
+		addi $sp, $sp, -4  # Decrement stack pointer by 4
+       		sw   $s4, 0($sp)   # Save the result to stack
+		jr $ra
+		
+	end_of_loop:
+		li	$v0, 10					# system call code for exit = 10
+		syscall
+	 									#  Takes you back to the end of the instruction 'jal subprogram_2'
 
-	space:
-		beqz	$s4, subprogram_2			# Checks if a character has already been found
-
-		la 	$s3, 1							# Making note of a space found after a character is found
-
-		j loop_through						# return back to the loop
