@@ -18,22 +18,22 @@
 
 		la $s1, 0								#Initializing the starting index for the character of the substring
 		la $s2, 0								#Initializing the starting index for the character of the substring
-		la $s5, 0								# Boolean for checking if a space is found after a valid character
-		la $s6, 0								# Boolean for non space character found
+		
 		j main_program							# Looping to the main program
 	
 
 	main_program:
 		
 		lb $t3, ($t4)							#Loading the character in the particular address
-							
 		
+		# These register will be changed only when inside subprogram_1
+		la $s5, 0								# Boolean for checking if a space is found after a valid character
+		la $s6, 0								# Boolean for non space character found
 		
 		beqz   	$t3, 			end_of_loop				#If "\0" found, end of loop
 		beq  	$t3, 	10, 	end_of_loop			#For string less than 9, the last characters is "\n", so checking for that
 		
-		
-		la 	$s6, 1							# Making note that a non zecharacter has been found.
+
 		
 		addu 	$s2, 	$s2, 	1				#	Incrementing the end index of the string
 		addu	$t4, 	$t4,	1				#	Look at the next character in the string
@@ -104,18 +104,30 @@
 		move 	$t2, $a2
 		
 		
+		
 		add $t0, $t0, $t1			#Looking at the next address in the string
 		
 		lb  $t3, ($t0)				# Loading the character pointed by the address $t0
 		
+		beq 	$t3, 	32, 	space				# Case for when a space character is found
 		
 		move $a0, $t3				#Passing the character as an argument to subprogram 1 to find the string associated with it.
 
-
+		# Since at this stage, the character can't be a space or '\n' or '\0', we can check if a character
+		# AND a space has appeared before it. If both are true, then it must be invalid. Otherwise, proceed
+		# to computing the decimal value
+		bne $s5, 1, compute							 
+		bne $s6, 1, compute
+		
+		
+		j invalid
+		
+		
+	compute:
+		la 	$s6, 1					# Making note that a character has been found.
 		# Finding the decimal representation of the character.
 		jal 	subprogram_1
 		
-
 		# The code below uses the following algorithm to find the decimal value for a valid hex string
 		# Initiliaze Result to 0
 		# Step 1: Multiply Result by 16, Result = Result * 16
@@ -151,8 +163,37 @@
 		# Re-iterate through the string by calling the subprogram once again
 		j subprogram_2
 		
+	space:
+		move 	$a1, $t1					
+		move 	$a2, $t2
+		
+		
+		
+		move $ra, $s7				# Restoring the saved address tp the $ra register
+		addu	$a1,	$a1,	1
+		
+	
+		beq	$a1,	$a2			empty_or_not
+		beqz	$s6, subprogram_2				# Checks if a valid character has already been found previously. If not loop back to the 
+
+		la 	$s5, 1							# Making note of a space found after a character is found
 
 		
+		j subprogram_2						# return back to the loop
+	
+	empty_or_not:
+		beq $s6, 0, invalid
+		
+		j go_back
+		
+		
+		
+		
+		
+		
+	
+	return_to_print:
+			
 	# This subprogram finds the decimal representation of the character passed to it. 
 	# It returns two values via the stack, the return code and the value itself.
 	# Return Code
@@ -218,18 +259,19 @@
 
 	#Computes the decimal value for 0-9 characters
 	valid_num:
-
+		li 	$v0, 	0
 		subu 	$v0, 	$a0, 	48				# Finding the real value of the character by subtracting
 		jr $ra									#  Takes you back to the end of the instruction 'jal subprogram_2'
 
 	#Computes the decimal value for A-F characters
 	valid_capital:
-
+		li 	$v0, 	0
 		subu 	$v0, 	$a0, 	55				# Finding the real value of the character by subtracting
 		jr $ra 									#  Takes you back to the end of the instruction 'jal subprogram_2'
 
 	#Computes the decimal value for a-f characters
 	valid_small:
+		li 	$v0, 	0
 		subu 	$v0, 	$a0, 	87				# Finding the real value of the character by subtracting
 		jr $ra
 		
